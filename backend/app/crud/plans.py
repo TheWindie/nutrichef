@@ -42,7 +42,14 @@ def _enrich_plan(plan):
                     "food_name": ing.food.name_cs,
                     "amount_radim_g": ing.amount_radim_g,
                     "amount_monika_g": ing.amount_monika_g,
-                    "macros_radim": mr, "macros_monika": mm})
+                    "macros_radim": mr, "macros_monika": mm,
+                    "food_data": {
+                        "energy_kcal": ing.food.energy_kcal,
+                        "protein_g":   ing.food.protein_g,
+                        "carbs_g":     ing.food.carbs_g,
+                        "fat_g":       ing.food.fat_g,
+                        "fiber_g":     ing.food.fiber_g,
+                    }})
             day_r = _add(day_r, meal_r)
             day_m = _add(day_m, meal_m)
             meals_out.append({"id": meal.id, "meal_type": meal.meal_type,

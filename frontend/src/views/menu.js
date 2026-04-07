@@ -2,7 +2,7 @@
  * views/menu.js — 7-denní menu tab
  */
 import { state } from "../state.js";
-import { mealBlock, macroCard } from "../components.js";
+import { mealBlock, macroCard, bindLiveCalc } from "../components.js";
 
 export function renderMenu(el) {
     const plan = state.plan;
@@ -35,4 +35,7 @@ export function renderMenu(el) {
             ${day.meals.map(mealBlock).join("")}
         </div>
     </div>`).join("");
+
+    // Připnout live přepočty na všechny inputy
+    bindLiveCalc(el);
 }
