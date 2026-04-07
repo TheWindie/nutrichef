@@ -36,5 +36,5 @@ docker compose pull
 docker compose up -d
 
 echo ""
-echo "🎉 NutriChef běží na http://10.20.10.87:3100"
-echo "   API docs: http://10.20.10.87:3100/docs"
+echo "🎉 NutriChef běží na http://10.20.10.87:${FRONTEND_PORT:-3100}"
+echo "   API docs: http://10.20.10.87:${FRONTEND_PORT:-3100}/docs"
