@@ -1,9 +1,9 @@
 FROM nginx:alpine
 
-# Zkopíruj frontend soubory do nginx html root
-COPY . /usr/share/nginx/html
+ARG BUILD_DATE=unknown
+LABEL build_date=$BUILD_DATE
 
-# Nginx konfigurace (proxy na backend)
+COPY . /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

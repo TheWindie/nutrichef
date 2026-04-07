@@ -1,5 +1,9 @@
 FROM python:3.12-slim
 
+# Cache bust - změní se s každým commitem
+ARG BUILD_DATE=unknown
+LABEL build_date=$BUILD_DATE
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
