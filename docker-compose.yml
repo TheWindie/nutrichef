@@ -19,7 +19,10 @@ services:
       - nutrichef
 
   backend:
-    image: ghcr.io/${GITHUB_USER:-thewindie}/nutrichef-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: nutrichef-backend:latest
     container_name: nutrichef-backend
     restart: unless-stopped
     depends_on:
@@ -29,7 +32,7 @@ services:
       DATABASE_URL: postgresql://nutrichef:${DB_PASSWORD:-nutrichef}@db:5432/nutrichef
       APP_ENV: production
     volumes:
-      - nutrichef-data:/data:ro
+      - ./data:/data:ro
     command: >
       sh -c "alembic upgrade head &&
              python -m app.seeds.run &&
@@ -38,7 +41,10 @@ services:
       - nutrichef
 
   frontend:
-    image: ghcr.io/${GITHUB_USER:-thewindie}/nutrichef-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: nutrichef-frontend:latest
     container_name: nutrichef-frontend
     restart: unless-stopped
     depends_on:
@@ -54,9 +60,3 @@ networks:
 
 volumes:
   pgdata:
-  nutrichef-data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${DATA_PATH:-/opt/nutrichef/data}

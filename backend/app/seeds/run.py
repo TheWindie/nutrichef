@@ -8,16 +8,13 @@ from app.database import SessionLocal
 from app.models.food import Food
 from app.models.plan import User, MealPlan, PlanDay, Meal, MealIngredient
 
-FOODS_FILE = Path(__file__).parent.parent.parent.parent / "data" / "seeds" / "foods_db.json"
+FOODS_FILE = Path("/data/seeds/foods_db.json")
 
 def seed_foods(db):
     if db.query(Food).count() > 0:
         print("  ⏭  Potraviny již existují, přeskakuji.")
         return
     raw = FOODS_FILE.read_text(encoding="utf-8")
-    # Odstraníme JS-style komentáře před parsováním
-    import re
-    raw = re.sub(r"//.*", "", raw)
     data = json.loads(raw)
     foods = []
     for f in data["foods"]:
