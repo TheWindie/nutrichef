@@ -2,7 +2,7 @@
 Seed skript — spusť jednou po `alembic upgrade head`:
     docker compose exec backend python -m app.seeds.run
 """
-import json, os, sys
+import json
 from pathlib import Path
 from app.database import SessionLocal
 from app.models.food import Food
@@ -10,31 +10,32 @@ from app.models.plan import User, MealPlan, PlanDay, Meal, MealIngredient
 
 FOODS_FILE = Path("/data/seeds/foods_db.json")
 
+
 def seed_foods(db):
     if db.query(Food).count() > 0:
         print("  ⏭  Potraviny již existují, přeskakuji.")
         return
-    raw = FOODS_FILE.read_text(encoding="utf-8")
-    data = json.loads(raw)
-    foods = []
-    for f in data["foods"]:
-        foods.append(Food(
-            source_id   = f.get("source_id"),
-            name_cs     = f["name_cs"],
-            name_en     = f.get("name_en"),
-            category    = f.get("category"),
-            energy_kcal = f["energy_kcal"],
-            energy_kj   = f.get("energy_kj"),
-            protein_g   = f.get("protein_g", 0),
-            carbs_g     = f.get("carbs_g", 0),
-            fat_g       = f.get("fat_g", 0),
-            fiber_g     = f.get("fiber_g", 0),
-            sugar_g     = f.get("sugar_g", 0),
-            sat_fat_g   = f.get("sat_fat_g", 0),
-            salt_g      = f.get("salt_g", 0),
-            water_g     = f.get("water_g", 0),
-            source      = "nutridatabaze.cz",
-        ))
+    data = json.loads(FOODS_FILE.read_text(encoding="utf-8"))
+    foods = [
+        Food(
+            source_id=f.get("source_id"),
+            name_cs=f["name_cs"],
+            name_en=f.get("name_en"),
+            category=f.get("category"),
+            energy_kcal=f["energy_kcal"],
+            energy_kj=f.get("energy_kj"),
+            protein_g=f.get("protein_g", 0),
+            carbs_g=f.get("carbs_g", 0),
+            fat_g=f.get("fat_g", 0),
+            fiber_g=f.get("fiber_g", 0),
+            sugar_g=f.get("sugar_g", 0),
+            sat_fat_g=f.get("sat_fat_g", 0),
+            salt_g=f.get("salt_g", 0),
+            water_g=f.get("water_g", 0),
+            source="nutridatabaze.cz",
+        )
+        for f in data["foods"]
+    ]
     db.bulk_save_objects(foods)
     db.commit()
     print(f"  ✅ Vloženo {len(foods)} potravin.")
@@ -50,28 +51,26 @@ def seed_users(db):
     db.commit()
     print("  ✅ Uživatelé Radim a Monika vytvořeni.")
 
+
 def seed_plan(db):
     if db.query(MealPlan).count() > 0:
         print("  ⏭  Plán již existuje, přeskakuji.")
         return
 
-    # Získáme ID potravin podle source_id
-    def fid(source_id: str) -> int:
+    def fid(source_id):
         food = db.query(Food).filter(Food.source_id == source_id).first()
         if not food:
-            raise ValueError(f"Potravina {source_id} nenalezena — spusť nejdřív seed_foods")
+            raise ValueError(f"Potravina {source_id} nenalezena")
         return food.id
 
     plan = MealPlan(id=1, name="Týdenní plán V1 — redukční", user_id=1)
     db.add(plan)
     db.flush()
 
-    # Definice 7 dní (0=Po ... 6=Ne)
     DAYS = [
-        # (day_of_week, [(meal_type, name, instructions, [(source_id, r_g, m_g)])])
-        (0, [  # Pondělí
+        (0, [
             ("breakfast", "Vejce na másle s šunkou a chlebem",
-             "1. Na pánvi rozehřejte máslo. 2. Orestujte šunku a vejce na mírném ohni. 3. Podávejte s Breadway chlebem.",
+             "1. Na pánvi rozehřejte máslo. 2. Orestujte šunku a vejce na mírném ohni. 3. Podávejte s chlebem.",
              [("NDZ-0501",220,110),("NDZ-0203",90,60),("NDZ-0705",120,70),("NDZ-0612",8,5),("NDZ-0952",100,60)]),
             ("lunch", "Kuřecí prsa s mrkvovo-jogurtovým krémem",
              "1. Rýži uvařte v rýžovaru. 2. Kuře ogrilujte na kontaktním grilu. 3. Mrkev rozmixujte s jogurtem.",
@@ -80,7 +79,7 @@ def seed_plan(db):
              "1. Hovězí nakrájejte a duste s cibulí a bujónem. 2. Podávejte s vařeným bramborem.",
              [("NDZ-0101",270,160),("NDZ-0901",400,250),("NDZ-1101",10,6),("NDZ-0954",100,60),("NDZ-0104",100,60)]),
         ]),
-        (1, [  # Úterý
+        (1, [
             ("breakfast", "Tvarohové lívance s jogurtovým přelivem",
              "1. Rozmixujte tvaroh, vejce a mouku. 2. Smažte na lehce olejem potřené pánvi.",
              [("NDZ-0605",250,160),("NDZ-0709",75,45),("NDZ-0501",65,45),("NDZ-1101",5,3),("NDZ-0603",100,60)]),
@@ -91,7 +90,7 @@ def seed_plan(db):
              "1. Krůtí orestujte na oleji. 2. Tortilly nahřejte, potřete smetanou.",
              [("NDZ-0350",250,150),("NDZ-0707",180,100),("NDZ-0608",90,60),("NDZ-1101",10,6),("NDZ-0952",150,100)]),
         ]),
-        (2, [  # Středa
+        (2, [
             ("breakfast", "Cottage bowl s hořčicí a žitným toastem",
              "1. Cottage smíchejte s hořčicí a pažitkou. 2. Toast opečte nasucho.",
              [("NDZ-0610",250,160),("NDZ-0706",100,60),("NDZ-1301",20,15),("NDZ-0952",120,80)]),
@@ -102,8 +101,7 @@ def seed_plan(db):
              "1. Kuře orestujte na pánvi. 2. Jogurt smíchejte s česnekem a hořčicí.",
              [("NDZ-0341",310,190),("NDZ-0901",400,250),("NDZ-1302",15,10),("NDZ-0603",100,60),("NDZ-1101",10,6)]),
         ]),
-    ]
-        (3, [  # Čtvrtek
+        (3, [
             ("breakfast", "Omeleta se sýrem a šunkou",
              "1. Vejce rozšlehejte s troškou vody. 2. Na másle orestujte šunku a sýr, zalijte vejci.",
              [("NDZ-0501",110,65),("NDZ-0609",60,40),("NDZ-0203",60,40),("NDZ-0612",8,5),("NDZ-0706",80,50)]),
@@ -114,7 +112,7 @@ def seed_plan(db):
              "1. Mleté orestujte s paprikou a cibulí. 2. Podávejte s uvařeným bramborem.",
              [("NDZ-0103",280,170),("NDZ-0952",150,100),("NDZ-0901",400,250),("NDZ-1101",10,6),("NDZ-0954",80,50)]),
         ]),
-        (4, [  # Pátek
+        (4, [
             ("breakfast", "Šlehaný tvaroh s vlašskými ořechy a toastem",
              "1. Tvaroh vyšlehejte s troškou mléka. 2. Přidejte borůvky a ořechy. Podávejte s žitným toastem.",
              [("NDZ-0605",310,190),("NDZ-1201",40,25),("NDZ-1003",100,60),("NDZ-0706",80,50)]),
@@ -125,7 +123,7 @@ def seed_plan(db):
              "1. Čočku uvařte v bujónu. 2. Vejce natvrdo. 3. Smíchejte s jogurtem a hořčicí.",
              [("NDZ-0801",110,70),("NDZ-0501",110,65),("NDZ-0603",100,60),("NDZ-0104",40,30),("NDZ-1302",15,10)]),
         ]),
-        (5, [  # Sobota
+        (5, [
             ("breakfast", "Vaječné muffiny se sýrem a šunkou",
              "1. Vejce rozšlehejte se špenátem a sýrem. 2. Pečte v fritéze ve formičkách.",
              [("NDZ-0501",135,85),("NDZ-0203",80,50),("NDZ-0609",40,25),("NDZ-0612",6,4),("NDZ-0706",80,50)]),
@@ -136,7 +134,7 @@ def seed_plan(db):
              "1. Kuře orestujte. 2. Smíchejte s mozzarellou, paprikou a jogurtovým přelivem.",
              [("NDZ-0341",280,170),("NDZ-0611",120,80),("NDZ-0952",180,120),("NDZ-0603",100,60),("NDZ-1101",10,6)]),
         ]),
-        (6, [  # Neděle
+        (6, [
             ("breakfast", "Žitný chléb s hummusem a vejcem",
              "1. Cizrnu rozmixujte s jogurtem a česnekem. 2. Namažte na chléb. Navrch ztracené vejce.",
              [("NDZ-0804",160,100),("NDZ-0501",110,65),("NDZ-0705",100,60),("NDZ-0952",100,60),("NDZ-0603",50,30)]),
@@ -161,10 +159,11 @@ def seed_plan(db):
             for (sid, r_g, m_g) in ings:
                 db.add(MealIngredient(
                     meal_id=meal.id, food_id=fid(sid),
-                    amount_radim_g=r_g, amount_monika_g=m_g
+                    amount_radim_g=r_g, amount_monika_g=m_g,
                 ))
     db.commit()
     print("  ✅ Plán V1 (7 dní × 3 jídla) vložen.")
+
 
 def run():
     db = SessionLocal()
@@ -180,6 +179,7 @@ def run():
         raise
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     run()
