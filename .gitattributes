@@ -1,0 +1,13 @@
+# Automatická normalizace line endings
+* text=auto
+
+# Linux skripty a Docker soubory musí mít LF
+*.sh text eol=lf
+Dockerfile text eol=lf
+frontend/Dockerfile text eol=lf
+backend/Dockerfile text eol=lf
+*.py text eol=lf
+alembic/env.py text eol=lf
+
+# Windows soubory mohou mít CRLF
+*.md text eol=crlf

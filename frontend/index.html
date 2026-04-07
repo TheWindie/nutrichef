@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriChef | Jídelní plán</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #050810; color: #f1f5f9; }
+        .nav-active { border-bottom: 2px solid #10b981; color: #10b981; font-weight: 800; }
+        .glass {
+            background: rgba(30,41,59,0.4);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 2.5rem;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        .sticky-col { position: sticky; left: 0; background: #0f172a; z-index: 10; padding-right: 1rem; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        #toast {
+            position: fixed; bottom: 2rem; right: 2rem; z-index: 999;
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 1rem; padding: .75rem 1.5rem;
+            font-size: .85rem; color: #f1f5f9;
+            opacity: 0; transition: opacity .3s;
+            pointer-events: none;
+        }
+        #toast.show { opacity: 1; }
+    </style>
+</head>
+<body class="antialiased">
+
+<!-- NAV -->
+<nav class="bg-slate-950/95 backdrop-blur-2xl sticky top-0 z-50 border-b border-white/5">
+    <div class="max-w-[1440px] mx-auto px-6 h-20 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">🍲</span>
+            <span class="font-black text-2xl tracking-tighter uppercase italic text-emerald-400">
+                NutriChef <span class="text-white">V2</span>
+            </span>
+        </div>
+        <div class="flex gap-4 md:gap-10">
+            <button data-tab="dash"  class="nav-btn nav-active py-2 text-[10px] uppercase font-bold tracking-[0.2em]">Dashboard</button>
+            <button data-tab="menu"  class="nav-btn py-2 text-[10px] uppercase font-bold tracking-[0.2em] text-slate-500">7-denní menu</button>
+            <button data-tab="shop"  class="nav-btn py-2 text-[10px] uppercase font-bold tracking-[0.2em] text-slate-500">Nákup</button>
+            <button data-tab="foods" class="nav-btn py-2 text-[10px] uppercase font-bold tracking-[0.2em] text-slate-500">Potraviny</button>
+        </div>
+    </div>
+</nav>
+
+<!-- MAIN -->
+<main class="max-w-[1440px] mx-auto px-6 py-10">
+
+    <!-- DASHBOARD -->
+    <section id="dash" class="tab-content active">
+        <div id="dash-root"></div>
+    </section>
+
+    <!-- MENU -->
+    <section id="menu" class="tab-content space-y-16">
+        <div id="menu-root"></div>
+    </section>
+
+    <!-- NÁKUP -->
+    <section id="shop" class="tab-content">
+        <div id="shop-root"></div>
+    </section>
+
+    <!-- DATABÁZE POTRAVIN -->
+    <section id="foods" class="tab-content space-y-8">
+        <div class="flex flex-col md:flex-row justify-between items-end gap-6">
+            <div>
+                <h2 class="text-4xl font-black">Databáze potravin</h2>
+                <p class="text-slate-500">Zdroj: nutridatabaze.cz (ÚZEI) — hodnoty na 100 g</p>
+            </div>
+            <div class="flex gap-4 w-full md:w-auto">
+                <input id="food-search" type="text" placeholder="Hledat potravinu…"
+                    class="bg-white/5 border border-white/10 rounded-2xl px-5 py-3
+                           text-sm text-white placeholder-slate-500 focus:outline-none
+                           focus:border-emerald-500 w-full md:w-72 transition">
+                <select id="food-cat"
+                    class="bg-white/5 border border-white/10 rounded-2xl px-4 py-3
+                           text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                    <option value="">Vše</option>
+                </select>
+            </div>
+        </div>
+        <div class="glass overflow-hidden shadow-2xl">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-white/5 text-[10px] uppercase font-black text-slate-500">
+                    <tr>
+                        <th class="p-5">Název</th>
+                        <th class="p-5">Kategorie</th>
+                        <th class="p-5 text-right">kcal</th>
+                        <th class="p-5 text-right">B (g)</th>
+                        <th class="p-5 text-right">S (g)</th>
+                        <th class="p-5 text-right">T (g)</th>
+                        <th class="p-5 text-right">Vl. (g)</th>
+                    </tr>
+                </thead>
+                <tbody id="foods-tbody" class="divide-y divide-white/5"></tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<!-- Toast notifikace -->
+<div id="toast"></div>
+
+
+<script type="module">
+import { api }           from "./src/api.js";
+import { state, setState } from "./src/state.js";
+import { renderDashboard } from "./src/views/dashboard.js";
+import { renderMenu }      from "./src/views/menu.js";
+import { renderShopping }  from "./src/views/shopping.js";
+import { fmt }             from "./src/utils.js";
+
+// ── Toast ───────────────────────────────────────────────────────────────────
+function toast(msg, err = false) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.style.borderColor = err ? "#f87171" : "rgba(255,255,255,0.1)";
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 3000);
+}
+
+// ── Navigace ────────────────────────────────────────────────────────────────
+function showTab(id) {
+    document.querySelectorAll(".tab-content").forEach(s => s.classList.remove("active"));
+    document.querySelectorAll(".nav-btn").forEach(b => {
+        b.classList.remove("nav-active");
+        b.classList.add("text-slate-500");
+    });
+    document.getElementById(id)?.classList.add("active");
+    document.querySelector(`[data-tab="${id}"]`)?.classList.add("nav-active");
+    document.querySelector(`[data-tab="${id}"]`)?.classList.remove("text-slate-500");
+    setState({ activeTab: id });
+
+    if (id === "dash")  renderDashboard(document.getElementById("dash-root"));
+    if (id === "menu")  renderMenu(document.getElementById("menu-root"));
+    if (id === "shop")  renderShopping(document.getElementById("shop-root"));
+    if (id === "foods") loadFoods();
+}
+
+document.querySelectorAll(".nav-btn").forEach(btn => {
+    btn.addEventListener("click", () => showTab(btn.dataset.tab));
+});
+
+// ── Databáze potravin ───────────────────────────────────────────────────────
+const CAT_LABELS = {
+    maso_drubez:"Drůbež", maso_hovezi:"Hovězí", maso_veprove:"Vepřové",
+    maso_ryby:"Ryby", mlecne_vyrobky:"Mléčné", vejce:"Vejce",
+    obili_pecivo:"Obiloviny", lustediny:"Luštěniny", zelenina:"Zelenina",
+    ovoce:"Ovoce", tuky_oleje:"Tuky", orechy_seminka:"Ořechy", ostatni:"Ostatní",
+};
+
+async function loadFoods() {
+    const search = document.getElementById("food-search")?.value || "";
+    const cat    = document.getElementById("food-cat")?.value    || "";
+    try {
+        const foods = await api.getFoods(search, cat);
+        const tbody = document.getElementById("foods-tbody");
+        tbody.innerHTML = foods.map(f => `
+        <tr class="hover:bg-white/5 transition-colors text-xs">
+            <td class="p-4 font-bold text-white">${f.name_cs}</td>
+            <td class="p-4 text-slate-500">${CAT_LABELS[f.category] || f.category || "—"}</td>
+            <td class="p-4 text-right text-emerald-400 font-black">${fmt(f.energy_kcal)}</td>
+            <td class="p-4 text-right">${fmt(f.protein_g,1)}</td>
+            <td class="p-4 text-right">${fmt(f.carbs_g,1)}</td>
+            <td class="p-4 text-right">${fmt(f.fat_g,1)}</td>
+            <td class="p-4 text-right text-slate-500">${fmt(f.fiber_g,1)}</td>
+        </tr>`).join("");
+    } catch(e) { toast("Chyba načítání potravin: " + e.message, true); }
+}
+
+async function initCategories() {
+    try {
+        const cats = await api.getCategories();
+        const sel  = document.getElementById("food-cat");
+        cats.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c; opt.textContent = CAT_LABELS[c] || c;
+            sel.appendChild(opt);
+        });
+    } catch {}
+}
+
+let searchTimer;
+document.getElementById("food-search")?.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadFoods, 350);
+});
+document.getElementById("food-cat")?.addEventListener("change", loadFoods);
+
+// ── Boot ────────────────────────────────────────────────────────────────────
+async function boot() {
+    try {
+        const [plan, shopping] = await Promise.all([
+            api.getPlan(state.activePlanId),
+            api.getShopping(state.activePlanId),
+        ]);
+        setState({ plan, shopping });
+        await initCategories();
+        renderDashboard(document.getElementById("dash-root"));
+        toast("✅ Plán načten");
+    } catch(e) {
+        toast("⚠️ API nedostupné — spusť docker compose up", true);
+        console.error(e);
+    }
+}
+
+boot();
+</script>
+</body>
+</html>
