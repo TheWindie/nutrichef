@@ -6,7 +6,7 @@
 set -e
 
 DEPLOY_DIR="/opt/nutrichef"
-REPO="https://github.com/radimkocian/nutrichef.git"
+REPO="https://github.com/TheWindie/nutrichef.git"
 
 echo "🚀 NutriChef deploy — WindieLAB"
 
